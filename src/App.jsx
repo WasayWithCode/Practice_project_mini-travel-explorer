@@ -1,12 +1,12 @@
 import Navbar from "./components/Navbar";
-import Home from "./pages/Home";
+import Home   from "./pages/Home";
 import Footer from "./components/Footer";
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)", fontFamily: "var(--font-body)" }}>
       <Navbar />
-      <main className="flex-1">
+      <main style={{ flex: 1 }}>
         <Home />
       </main>
       <Footer />

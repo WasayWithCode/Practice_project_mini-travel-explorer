@@ -1,134 +1,222 @@
 import { useState, useMemo, useRef } from "react";
 import Hero from "../components/Hero";
 import SearchBar from "../components/SearchBar";
+import FilterBar from "../components/FilterBar";
 import DestinationCard from "../components/DestinationCard";
 import DestinationDetails from "../components/DestinationDetails";
+import About from "../components/About";
+import Contact from "../components/Contact";
 import destinations from "../data/destinations";
 
-// Price filter options
-const PRICE_FILTERS = [
-  { label: "All", value: "all" },
-  { label: "Under $500", value: "under500" },
-  { label: "$500 – $1000", value: "500to1000" },
-  { label: "Above $1000", value: "above1000" },
-];
-
-function matchesPrice(price, filter) {
-  if (filter === "all") return true;
-  if (filter === "under500") return price < 500;
-  if (filter === "500to1000") return price >= 500 && price <= 1000;
-  if (filter === "above1000") return price > 1000;
+function matchPrice(price, f) {
+  if (f === "all")       return true;
+  if (f === "under500")  return price < 500;
+  if (f === "500to1000") return price >= 500 && price <= 1000;
+  if (f === "above1000") return price > 1000;
   return true;
 }
 
+function sort(list, by) {
+  const a = [...list];
+  if (by === "price_asc")   return a.sort((x, y) => x.price - y.price);
+  if (by === "price_desc")  return a.sort((x, y) => y.price - x.price);
+  if (by === "name_asc")    return a.sort((x, y) => x.name.localeCompare(y.name));
+  if (by === "rating_desc") return a.sort((x, y) => y.rating - x.rating);
+  return a;
+}
+
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [priceFilter, setPriceFilter] = useState("all");
-  const [selectedDestination, setSelectedDestination] = useState(null);
+  const [query,    setQuery]    = useState("");
+  const [price,    setPrice]    = useState("all");
+  const [sortBy,   setSortBy]   = useState("rating_desc");
+  const [selected, setSelected] = useState(null);
 
-  // Ref to scroll to destinations section when CTA is clicked
-  const destinationsRef = useRef(null);
+  const destRef = useRef(null);
 
-  function handleExploreClick() {
-    destinationsRef.current?.scrollIntoView({ behavior: "smooth" });
+  function scrollToDest() {
+    destRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
-  // Derived list — re-computed only when search or filter changes
-  const filteredDestinations = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    return destinations.filter((dest) => {
-      const matchesSearch =
-        dest.name.toLowerCase().includes(query) ||
-        dest.country.toLowerCase().includes(query);
-      return matchesSearch && matchesPrice(dest.price, priceFilter);
-    });
-  }, [searchQuery, priceFilter]);
+  function handleHeroSearch(q) {
+    setQuery(q);
+    setTimeout(scrollToDest, 100);
+  }
+
+  const visible = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    const filtered = destinations.filter(d =>
+      (d.name.toLowerCase().includes(q) || d.country.toLowerCase().includes(q)) &&
+      matchPrice(d.price, price)
+    );
+    return sort(filtered, sortBy);
+  }, [query, price, sortBy]);
+
+  const isFiltered = query !== "" || price !== "all";
 
   return (
     <>
       {/* Hero */}
-      <Hero onExploreClick={handleExploreClick} />
+      <Hero
+        onExploreClick={scrollToDest}
+        searchQuery={query}
+        onSearchChange={handleHeroSearch}
+      />
 
-      {/* Destinations section */}
+      {/* ── Destinations ── */}
       <section
         id="destinations"
-        ref={destinationsRef}
-        className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
+        ref={destRef}
+        aria-label="Popular Destinations"
+        style={{ background: "var(--bg-alt)", borderTop: "1px solid var(--border)" }}
       >
-        {/* Section header */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-3">
-            Popular Destinations
-          </h2>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto">
-            Handpicked places to inspire your next journey
-          </p>
-        </div>
+        <div className="section-container" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 24px" }}>
 
-        {/* Search + Filter controls */}
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between mb-8">
-          <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+          {/* Section header */}
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <span style={{
+              display: "inline-block",
+              padding: "5px 14px", borderRadius: 99,
+              background: "var(--primary-subtle)", color: "var(--primary)",
+              fontSize: "0.78rem", fontWeight: 700,
+              textTransform: "uppercase", letterSpacing: "0.07em",
+              marginBottom: 16,
+            }}>🌍 Explore</span>
 
-          {/* Price filter buttons */}
-          <div className="flex flex-wrap gap-2">
-            {PRICE_FILTERS.map((filter) => (
+            <h2 style={{
+              fontFamily: "var(--font-heading)",
+              fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+              fontWeight: 800,
+              color: "var(--text-heading)",
+              letterSpacing: "-0.03em",
+              marginBottom: 10,
+            }}>Popular Destinations</h2>
+
+            <p style={{ fontSize: "0.95rem", color: "var(--text-body)", maxWidth: 420, margin: "0 auto" }}>
+              Handpicked places to inspire your next adventure
+            </p>
+          </div>
+
+          {/* ── Toolbar ── */}
+          <div className="destination-toolbar" style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 12,
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 20px",
+            borderRadius: 14,
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-xs)",
+            marginBottom: 32,
+          }}>
+            {/* Left: search */}
+            <SearchBar searchQuery={query} onSearchChange={setQuery} />
+
+            {/* Right: filters + sort */}
+            <FilterBar
+              priceFilter={price}
+              onPriceChange={setPrice}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+            />
+          </div>
+
+          {/* Result count + clear */}
+          <div className="results-row" style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 28,
+            flexWrap: "wrap",
+            gap: 8,
+          }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}
+               aria-live="polite" aria-atomic="true">
+              {visible.length > 0
+                ? `${visible.length} destination${visible.length !== 1 ? "s" : ""} found`
+                : "No destinations match your filters"}
+            </p>
+            {isFiltered && (
               <button
-                key={filter.value}
-                onClick={() => setPriceFilter(filter.value)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors duration-200 whitespace-nowrap
-                  ${
-                    priceFilter === filter.value
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600"
-                  }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+                onClick={() => { setQuery(""); setPrice("all"); }}
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  color: "var(--primary)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  fontFamily: "var(--font-body)",
+                  textDecoration: "underline",
+                  textUnderlineOffset: 2,
+                }}
+              >Clear filters</button>
+            )}
           </div>
+
+          {/* Cards — responsive: 1 / 2 / 3 columns (mobile / tablet / desktop) */}
+          {visible.length > 0 ? (
+            <div className="dest-grid">
+              {visible.map(d => (
+                <DestinationCard
+                  key={d.id}
+                  destination={d}
+                  onViewDetails={setSelected}
+                />
+              ))}
+            </div>
+          ) : (
+            /* Empty state */
+            <div style={{
+              textAlign: "center",
+              padding: "80px 24px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
+            }}>
+              <span style={{ fontSize: "3.5rem" }} aria-hidden="true">🔍</span>
+              <h3 style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: "1.25rem",
+                fontWeight: 700,
+                color: "var(--text-heading)",
+              }}>No destinations found</h3>
+              <p style={{ color: "var(--text-body)", fontSize: "0.9rem", maxWidth: 320 }}>
+                Try a different search term or remove a price filter.
+              </p>
+              <button
+                onClick={() => { setQuery(""); setPrice("all"); }}
+                style={{
+                  marginTop: 8,
+                  padding: "10px 24px",
+                  borderRadius: 10,
+                  background: "var(--primary)",
+                  color: "#fff",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-body)",
+                }}
+              >Show all destinations</button>
+            </div>
+          )}
         </div>
-
-        {/* Results count */}
-        <p className="text-gray-400 text-sm mb-6">
-          {filteredDestinations.length === 0
-            ? "No destinations found"
-            : `Showing ${filteredDestinations.length} destination${filteredDestinations.length !== 1 ? "s" : ""}`}
-        </p>
-
-        {/* Destination cards grid */}
-        {filteredDestinations.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredDestinations.map((dest) => (
-              <DestinationCard
-                key={dest.id}
-                destination={dest}
-                onViewDetails={setSelectedDestination}
-              />
-            ))}
-          </div>
-        ) : (
-          // Empty state
-          <div className="text-center py-20">
-            <p className="text-6xl mb-4">🔍</p>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No destinations found</h3>
-            <p className="text-gray-400">Try a different search term or remove the price filter.</p>
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setPriceFilter("all");
-              }}
-              className="mt-6 text-blue-600 hover:underline text-sm font-medium"
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
       </section>
 
-      {/* Destination details modal */}
+      {/* About */}
+      <About />
+
+      {/* Contact */}
+      <Contact />
+
+      {/* Details modal */}
       <DestinationDetails
-        destination={selectedDestination}
-        onClose={() => setSelectedDestination(null)}
+        destination={selected}
+        onClose={() => setSelected(null)}
       />
     </>
   );
